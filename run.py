@@ -1,5 +1,7 @@
 import os
 import asyncio
+import logging  # Not for production
+
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message
@@ -28,4 +30,6 @@ async def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)  # Not for production
+
     asyncio.run(main())
