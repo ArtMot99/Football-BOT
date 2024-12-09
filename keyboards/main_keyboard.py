@@ -5,6 +5,9 @@ main = ReplyKeyboardMarkup(keyboard=[
         KeyboardButton(text="Запланировать тренировку"),
         KeyboardButton(text="Начать опрос"),
     ],
-    [KeyboardButton(text="Послать QR и посчитать оплату")],
-    [KeyboardButton(text="Отменить тренировку")]
+    [
+        KeyboardButton(text="Разделить всех на команды"),
+        KeyboardButton(text="Послать QR и посчитать оплату")
+    ],
+    [KeyboardButton(text="Закрыть меню")]
 ])
