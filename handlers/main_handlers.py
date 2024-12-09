@@ -1,15 +1,22 @@
+import os
+
+from dotenv import load_dotenv
 from aiogram import F, Router
 from aiogram.types import Message, PollAnswer, ReplyKeyboardRemove
 from aiogram.filters import CommandStart
 
 import keyboards.main_keyboard as kb
+from keyboards.inline_maps_button import inline_keyboard_with_map
 from messages.date_time_messages import message_for_group_about_training, input_training_time
 from messages.participant_messages import caption_of_pay_photo
 from states.main_states import WAITING_FOR_DATE, WAITING_FOR_PARTICIPANTS, user_state, WAITING_FOR_TIME
 from constants.main_constants import GROUP_CHAT_ID, TOTAL_AMOUNT, VOTES
+from teams.team_utils import divide_into_teams
 from validators.validators import ValidationError, validate_participants, validate_time_range, validate_date
 
 router = Router()
+load_dotenv()
+ALLOWED_USERS = list(map(int, os.getenv("ALLOWED_USERS", "").split(",")))
 
 
 @router.message(F.text == "Начать опрос")
@@ -52,8 +59,39 @@ async def ask_for_date(message: Message):
     )
 
 
+@router.message(F.text == "Разделить всех на команды")
+async def divide_players_into_teams(message: Message):
+    players = list(VOTES)
+    if not players:
+        await message.answer("Нет игроков для формирования команд!")
+        return
+
+    teams = divide_into_teams(players, team_size=5)
+    final_team_list = "\n\n".join(
+        [f"Команда {i + 1}: " + ", ".join(team) for i, team in enumerate(teams)]
+    )
+
+    await message.bot.send_message(
+        chat_id=GROUP_CHAT_ID,
+        text=f"Список команд:\n\n{final_team_list}"
+    )
+    await message.answer("Игроки успешно разделены на команды!")
+
+
+@router.message(F.text == "Закрыть меню")
+async def close_main_menu(message: Message):
+    await message.answer(
+        text="Вы закрыли главное меню.",
+        reply_markup=ReplyKeyboardRemove()
+    )
+
+
 @router.message(CommandStart())
 async def cmd_start(message: Message):
+    if message.from_user.id not in ALLOWED_USERS:
+        await message.answer("У вас нет доступа к этому боту.")
+        return
+
     await message.answer(
         text="Выберете пункт меню",
         reply_markup=kb.main
@@ -62,20 +100,27 @@ async def cmd_start(message: Message):
 
 @router.poll_answer()
 async def handle_poll_answer(poll_answer: PollAnswer):
-    username = poll_answer.user.username
+    user = poll_answer.user
+    username = user.username or user.first_name
     options_ids = poll_answer.option_ids
 
+    # Если выбран вариант "Да ✅"
     if 0 in options_ids:
         VOTES.add(username)
     else:
         VOTES.discard(username)
 
+    # Just for debug! Not for production
     print(VOTES)
 
 
 @router.message(F.text)
 async def handle_input(message: Message):
     user_id = message.from_user.id
+    if user_id not in ALLOWED_USERS:
+        await message.answer("У вас нет доступа к этому боту.")
+        return
+
     current_state = user_state.get(user_id, {})
 
     if current_state.get("state") == WAITING_FOR_DATE:
@@ -102,7 +147,12 @@ async def handle_input(message: Message):
                 end_time=end_time.strftime('%H:%M')
             )
 
-            await message.bot.send_message(chat_id=GROUP_CHAT_ID, text=group_message)
+            await message.bot.send_message(
+                chat_id=GROUP_CHAT_ID,
+                text=group_message,
+                reply_markup=inline_keyboard_with_map
+            )
+
             await message.answer("Сообщение отправлено в группу!")
             user_state.pop(user_id, None)
         except ValidationError as e:
@@ -115,7 +165,7 @@ async def handle_input(message: Message):
 
             await message.bot.send_photo(
                 chat_id=GROUP_CHAT_ID,
-                photo="https://dhiway.com/wp-content/uploads/2021/09/Artboard-2-1.png",
+                photo="https://i.ibb.co/yggZ8jn/IMG-0696.jpg",
                 caption=caption_of_pay_photo.format(amount_per_person=round(amount_per_person))
             )
 
