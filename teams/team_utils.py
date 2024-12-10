@@ -3,10 +3,9 @@ import random
 
 def divide_into_teams(players, team_size=5) -> list:
     """
-    Разделяет список игроков на команды заданного размера.
-    Если игроков недостаточно для полного формирования команд, оставшиеся идут в последнюю команду.
+    Splits the list of players into teams of the specified size.
+    If there are not enough players to form complete teams, the remaining players go to the last team.
     """
-    # Перетасовываем игроков случайным образом
     random.shuffle(players)
     teams = [players[i:i + team_size] for i in range(0, len(players), team_size)]
     return teams

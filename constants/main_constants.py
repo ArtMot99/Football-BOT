@@ -1,5 +1,5 @@
-# Сумма оплаты за использование зала
+# Total sum of football hall per 2 hours
 TOTAL_AMOUNT = 1300
 
-# ID группы, куда отправляется опрос ( Football Kolin )
+# Group ID telegram ( Football Kolin )
 GROUP_CHAT_ID = -1002283871042

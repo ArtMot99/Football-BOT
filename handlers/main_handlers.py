@@ -36,7 +36,10 @@ ALLOWED_USERS = list(map(int, os.getenv("ALLOWED_USERS", "").split(",")))
 
 
 @router.message(F.text == "Начать опрос")
-async def send_poll(message: Message):
+async def send_poll(message: Message) -> None:
+    """
+    Handling the "Start Polling" command.
+    """
     question = "Идешь на тренировку?\nСтавь галочку только если точно будешь 😜"
     options = ["Да ✅", "Нет ❌"]
 
@@ -56,7 +59,10 @@ async def send_poll(message: Message):
 
 
 @router.message(F.text == "Послать QR и посчитать оплату")
-async def ask_for_participants(message: Message):
+async def ask_for_participants(message: Message) -> None:
+    """
+    Handling the "Send QR and calculate payment" command.
+    """
     user_state[message.from_user.id] = {"state": WAITING_FOR_PARTICIPANTS}
     await message.answer(
         text="Введите количество участников тренировки",
@@ -65,7 +71,10 @@ async def ask_for_participants(message: Message):
 
 
 @router.message(F.text == "Запланировать тренировку")
-async def ask_for_date(message: Message):
+async def ask_for_date(message: Message) -> None:
+    """
+    Handling the "Schedule a training session" command.
+    """
     user_state[message.from_user.id] = {"state": WAITING_FOR_DATE}
     await message.answer(
         text=input_date_next_training,
@@ -74,7 +83,10 @@ async def ask_for_date(message: Message):
 
 
 @router.message(F.text == "Разделить всех на команды")
-async def divide_players_into_teams(message: Message):
+async def divide_players_into_teams(message: Message) -> None:
+    """
+    Handling the "Divide everyone into teams" command.
+    """
     players = list(VOTES)
     if not players:
         await message.answer(
@@ -94,7 +106,6 @@ async def divide_players_into_teams(message: Message):
         reply_markup=ReplyKeyboardRemove()
     )
 
-    # Очистка данных в VOTES
     clear_votes()
     VOTES.clear()
 
@@ -105,7 +116,10 @@ async def divide_players_into_teams(message: Message):
 
 
 @router.message(F.text == "Закрыть меню")
-async def close_main_menu(message: Message):
+async def close_main_menu(message: Message) -> None:
+    """
+    Handling the "Close menu" command.
+    """
     await message.answer(
         text="Вы закрыли главное меню.",
         reply_markup=ReplyKeyboardRemove()
@@ -113,7 +127,10 @@ async def close_main_menu(message: Message):
 
 
 @router.message(CommandStart())
-async def cmd_start(message: Message):
+async def cmd_start(message: Message) -> None:
+    """
+    Handling the "/start" command.
+    """
     if message.from_user.id not in ALLOWED_USERS:
         await message.answer(forbidden_message)
         return
@@ -125,12 +142,14 @@ async def cmd_start(message: Message):
 
 
 @router.poll_answer()
-async def handle_poll_answer(poll_answer: PollAnswer):
+async def handle_poll_answer(poll_answer: PollAnswer) -> None:
+    """
+    Handling user responses to the survey.
+    """
     user = poll_answer.user
     username = user.username or user.first_name
     options_ids = poll_answer.option_ids
 
-    # Если выбран вариант "Да ✅"
     if 0 in options_ids:
         VOTES.add(username)
     else:
@@ -143,7 +162,10 @@ async def handle_poll_answer(poll_answer: PollAnswer):
 
 
 @router.message(F.text)
-async def handle_input(message: Message):
+async def handle_input(message: Message) -> None:
+    """
+    Processes all text written to the bot and checks states.
+    """
     user_id = message.from_user.id
     if user_id not in ALLOWED_USERS:
         await message.answer(forbidden_message)

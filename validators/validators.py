@@ -5,13 +5,13 @@ from messages.participant_messages import participants_must_be_correct, particip
 
 
 class ValidationError(Exception):
-    """Кастомное исключение для удобства обработки ошибок валидации."""
+    """Custom exception for easy handling of validation error."""
     pass
 
 
 def validate_date(date_text: str) -> datetime:
     """
-    Проверяет, что дата введена в формате ДД.ММ.ГГГГ.
+    Checks that the date is entered in the format DD.MM.YYYY.
     """
     try:
         return datetime.strptime(date_text, "%d.%m.%Y")
@@ -21,8 +21,8 @@ def validate_date(date_text: str) -> datetime:
 
 def validate_time_range(time_text: str) -> tuple[datetime.time, datetime.time]:
     """
-    Проверяет, что диапазон времени введен в формате ЧЧ:ММ - ЧЧ:ММ.
-    Возвращает начало и конец в виде объектов time.
+    Checks that the time range is entered in HH:MM - HH:MM format.
+    Returns the start and as time object.
     """
     try:
         if "-" not in time_text:
@@ -42,7 +42,7 @@ def validate_time_range(time_text: str) -> tuple[datetime.time, datetime.time]:
 
 def validate_participants(participants_text: str) -> int:
     """
-    Проверяет, что количество участников — положительное целое число.
+    Checks that the number of participants is a positive integer.
     """
     try:
         participants = int(participants_text)
