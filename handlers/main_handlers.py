@@ -7,12 +7,28 @@ from aiogram.filters import CommandStart
 
 import keyboards.main_keyboard as kb
 from keyboards.inline_maps_button import inline_keyboard_with_map
-from messages.date_time_messages import message_for_group_about_training, input_training_time
+from messages.access_messages import forbidden_message
+from messages.date_time_messages import (
+    message_for_group_about_training,
+    input_training_time,
+    input_date_next_training
+)
 from messages.participant_messages import caption_of_pay_photo
-from states.main_states import WAITING_FOR_DATE, WAITING_FOR_PARTICIPANTS, user_state, WAITING_FOR_TIME
-from constants.main_constants import GROUP_CHAT_ID, TOTAL_AMOUNT, VOTES
+from states.main_states import (
+    WAITING_FOR_DATE,
+    WAITING_FOR_PARTICIPANTS,
+    WAITING_FOR_TIME,
+    user_state
+)
+from constants.main_constants import GROUP_CHAT_ID, TOTAL_AMOUNT
 from teams.team_utils import divide_into_teams
-from validators.validators import ValidationError, validate_participants, validate_time_range, validate_date
+from validators.validators import (
+    ValidationError,
+    validate_participants,
+    validate_time_range,
+    validate_date
+)
+from votes.votes import VOTES, save_votes, clear_votes
 
 router = Router()
 load_dotenv()
@@ -21,22 +37,20 @@ ALLOWED_USERS = list(map(int, os.getenv("ALLOWED_USERS", "").split(",")))
 
 @router.message(F.text == "Начать опрос")
 async def send_poll(message: Message):
-    question = "Идешь на тренировку?"
-    options = ["Да ✅", "Не знаю 🤷🏻", "Нет ❌"]
-    is_anonymous = False
+    question = "Идешь на тренировку?\nСтавь галочку только если точно будешь 😜"
+    options = ["Да ✅", "Нет ❌"]
 
     # Отправляем опрос в группу
-    poll_message = await message.bot.send_poll(
+    await message.bot.send_poll(
         chat_id=GROUP_CHAT_ID,
         question=question,
         options=options,
-        is_anonymous=is_anonymous
+        is_anonymous=False
     )
 
-    poll_id = poll_message.poll.id
     await message.bot.send_message(
         chat_id=message.chat.id,
-        text=f"Опрос отправлен. Его ID {poll_id}",
+        text=f"Опрос отправлен в группу.",
         reply_markup=ReplyKeyboardRemove()
     )
 
@@ -45,7 +59,7 @@ async def send_poll(message: Message):
 async def ask_for_participants(message: Message):
     user_state[message.from_user.id] = {"state": WAITING_FOR_PARTICIPANTS}
     await message.answer(
-        "Введите количество участников тренировки",
+        text="Введите количество участников тренировки",
         reply_markup=ReplyKeyboardRemove()
     )
 
@@ -54,7 +68,7 @@ async def ask_for_participants(message: Message):
 async def ask_for_date(message: Message):
     user_state[message.from_user.id] = {"state": WAITING_FOR_DATE}
     await message.answer(
-        "Введите дату следующей тренировки в формате ДД.ММ.ГГГГ",
+        text=input_date_next_training,
         reply_markup=ReplyKeyboardRemove()
     )
 
@@ -63,7 +77,10 @@ async def ask_for_date(message: Message):
 async def divide_players_into_teams(message: Message):
     players = list(VOTES)
     if not players:
-        await message.answer("Нет игроков для формирования команд!")
+        await message.answer(
+            text="Нет игроков для формирования команд!",
+            reply_markup=ReplyKeyboardRemove()
+        )
         return
 
     teams = divide_into_teams(players, team_size=5)
@@ -73,9 +90,18 @@ async def divide_players_into_teams(message: Message):
 
     await message.bot.send_message(
         chat_id=GROUP_CHAT_ID,
-        text=f"Список команд:\n\n{final_team_list}"
+        text=f"Список команд:\n\n{final_team_list}",
+        reply_markup=ReplyKeyboardRemove()
     )
-    await message.answer("Игроки успешно разделены на команды!")
+
+    # Очистка данных в VOTES
+    clear_votes()
+    VOTES.clear()
+
+    await message.answer(
+        text="Игроки успешно разделены на команды!",
+        reply_markup=ReplyKeyboardRemove()
+    )
 
 
 @router.message(F.text == "Закрыть меню")
@@ -89,7 +115,7 @@ async def close_main_menu(message: Message):
 @router.message(CommandStart())
 async def cmd_start(message: Message):
     if message.from_user.id not in ALLOWED_USERS:
-        await message.answer("У вас нет доступа к этому боту.")
+        await message.answer(forbidden_message)
         return
 
     await message.answer(
@@ -110,6 +136,8 @@ async def handle_poll_answer(poll_answer: PollAnswer):
     else:
         VOTES.discard(username)
 
+    save_votes(VOTES)
+
     # Just for debug! Not for production
     print(VOTES)
 
@@ -118,7 +146,7 @@ async def handle_poll_answer(poll_answer: PollAnswer):
 async def handle_input(message: Message):
     user_id = message.from_user.id
     if user_id not in ALLOWED_USERS:
-        await message.answer("У вас нет доступа к этому боту.")
+        await message.answer(forbidden_message)
         return
 
     current_state = user_state.get(user_id, {})
